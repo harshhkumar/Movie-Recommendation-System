@@ -6,6 +6,7 @@
 
 import pandas as pd
 import numpy as np
+import pickle
 
 
 # In[68]:
@@ -371,6 +372,17 @@ recommend('Gandhi')
 
 
 recommend('John Carter')
+
+
+# In[125]:
+
+
+# Save movies data
+movies_dict = movies.to_dict()
+pickle.dump(movies_dict, open('movies_dict.pkl', 'wb'))
+
+# Save similarity matrix
+pickle.dump(similarity, open('similarity.pkl', 'wb'))
 
 
 # In[ ]:
