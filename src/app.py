@@ -163,19 +163,18 @@ st.markdown("""
 
 @st.cache_data(ttl=3600)
 def get_movie_poster(movie_id):
-    headers = {
-        "Authorization": f"Bearer {TMDB_API_READ_ACCESS_TOKEN}",
-        "accept": "application/json"
-    }
-    response = requests.get(
-        f"https://api.themoviedb.org/3/movie/{movie_id}",
-        headers=headers
-    )
-    if response.status_code == 200:
+    try:
+        response = requests.get(
+            f"https://api.themoviedb.org/3/movie/{movie_id}",
+            params={"api_key": TMDB_API_KEY}
+        )
         data = response.json()
-        if data.get('poster_path'):
+        if 'poster_path' in data and data['poster_path']:
             return f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
-    return "https://via.placeholder.com/500x750?text=No+Poster+Available"
+        return None
+    except Exception as e:
+        st.error(f"Error fetching poster: {str(e)}")
+        return None
 
 @st.cache_data(ttl=3600)
 def get_movie_trailer(movie_id):
@@ -265,7 +264,16 @@ def main():
                 cols = st.columns(5)
                 for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
                     with col:
-                        st.image(get_movie_poster(movie['id']), use_container_width=True)
+                        # Add error handling for movie poster
+                        try:
+                            poster_url = get_movie_poster(movie['id'])
+                            if poster_url:
+                                st.image(poster_url, use_container_width=True)
+                            else:
+                                st.image("https://via.placeholder.com/400x600?text=No+Poster", use_container_width=True)
+                        except Exception as e:
+                            st.image("https://via.placeholder.com/400x600?text=No+Poster", use_container_width=True)
+                            
                         st.markdown(f"**{movie['title']}**")
                         st.markdown(f"⭐ {movie['vote_average']}/10")
                         st.markdown(f"📅 {movie['release_date'][:4]}")
