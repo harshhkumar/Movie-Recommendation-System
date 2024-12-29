@@ -14,7 +14,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS
+# Custom CSS for Netflix style
 st.markdown("""
     <style>
     .movie-container {
@@ -56,21 +56,16 @@ st.markdown("""
 
 def get_movie_poster(movie_id):
     try:
-        # Use smaller image size (w200 instead of w500)
-        base_url = "https://image.tmdb.org/t/p/w200"
-        
         response = requests.get(
             f"https://api.themoviedb.org/3/movie/{movie_id}",
-            params={"api_key": TMDB_API_KEY},
-            timeout=5  # Add timeout
+            params={"api_key": TMDB_API_KEY}
         )
         data = response.json()
-        
-        if data.get('poster_path'):
-            return f"{base_url}{data['poster_path']}"
-        return "https://via.placeholder.com/200x300?text=No+Poster"
+        if 'poster_path' in data and data['poster_path']:
+            return f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
+        return None
     except:
-        return "https://via.placeholder.com/200x300?text=No+Poster"
+        return None
 
 def get_movie_trailer(movie_id):
     try:
@@ -86,16 +81,12 @@ def get_movie_trailer(movie_id):
     except:
         return None
 
-def load_recommender():
-    recommender = MovieRecommender()
-    recommender.load_and_prepare_data()
-    return recommender
-
 def main():
     st.title("🎬 Movie Recommendation System")
     
     # Load recommender
-    recommender = load_recommender()
+    recommender = MovieRecommender()
+    recommender.load_and_prepare_data()
     
     # Search container
     with st.container():
@@ -105,8 +96,7 @@ def main():
             movie_list = recommender.get_all_movie_titles()
             selected_movie = st.selectbox(
                 "Type or select a movie you like:",
-                movie_list,
-                label_visibility="collapsed"
+                movie_list
             )
         
         with col2:
@@ -138,35 +128,23 @@ def main():
     
     # Show recommendations
     if show_rec and selected_movie:
-        with st.spinner('Finding similar movies...'):
-            recommendations = recommender.get_recommendations(selected_movie)
-            if recommendations is not None:
-                st.subheader("You might also like:")
-                
-                # Use 5 columns
-                cols = st.columns(5)
-                
-                # Load all posters first
-                posters = {}
-                for _, movie in recommendations.iterrows():
-                    posters[movie['id']] = get_movie_poster(movie['id'])
-                
-                # Display movies
-                for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
-                    with col:
-                        # Use cached poster
-                        poster = posters.get(movie['id'])
-                        if poster:
-                            st.image(poster, width=150)  # Reduced width
-                        
-                        # Minimal info to improve speed
-                        st.markdown(f"**{movie['title']}**")
-                        st.markdown(f"⭐ {movie['vote_average']:.1f}/10")
-                        
-                        # Use button instead of expander for better performance
-                        if st.button(f"More Info {idx}"):
-                            st.write(f"**Release:** {movie['release_date'][:4]}")
-                            st.write(f"**Cast:** {movie['cast'][:100]}...")  # Limit cast length
+        recommendations = recommender.get_recommendations(selected_movie)
+        if recommendations is not None:
+            st.subheader("You might also like:")
+            cols = st.columns(5)
+            for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
+                with col:
+                    poster_path = get_movie_poster(movie['id'])
+                    if poster_path:
+                        st.image(poster_path, use_container_width=True)
+                    st.markdown(f"**{movie['title']}**")
+                    st.markdown(f"⭐ {movie['vote_average']:.1f}/10")
+                    
+                    with st.expander("More Info"):
+                        st.write(f"**Release:** {movie['release_date'][:4]}")
+                        st.write(f"**Cast:** {movie['cast']}")
+                        st.write(f"**Genres:** {movie['genres']}")
+                        st.write(movie['overview'])
 
 if __name__ == "__main__":
     main() 
