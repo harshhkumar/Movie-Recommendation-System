@@ -56,15 +56,20 @@ st.markdown("""
 
 def get_movie_poster(movie_id):
     try:
-        response = requests.get(
-            f"https://api.themoviedb.org/3/movie/{movie_id}",
-            params={"api_key": TMDB_API_KEY}
-        )
-        data = response.json()
-        if 'poster_path' in data and data['poster_path']:
-            return f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}"
+        headers = {
+            "Authorization": f"Bearer {TMDB_API_READ_ACCESS_TOKEN}",
+            "accept": "application/json"
+        }
+        response = requests.get(url, headers=headers)
+        
+        if response.status_code == 200:
+            data = response.json()
+            if data.get('poster_path'):
+                return f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
         return None
-    except:
+    except Exception as e:
+        print(f"Debug - Poster Error: {str(e)}")  # For debugging
         return None
 
 def get_movie_trailer(movie_id):
@@ -133,23 +138,39 @@ def main():
     
     # Show recommendations
     if show_rec and selected_movie:
-        recommendations = recommender.get_recommendations(selected_movie)
-        if recommendations is not None:
-            st.subheader("You might also like:")
-            cols = st.columns(5)
-            for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
-                with col:
-                    poster_path = get_movie_poster(movie['id'])
-                    if poster_path:
-                        st.image(poster_path, use_container_width=True)
-                    st.markdown(f"**{movie['title']}**")
-                    st.markdown(f"⭐ {movie['vote_average']:.1f}/10")
+        with st.spinner('Finding similar movies...'):
+            try:
+                recommendations = recommender.get_recommendations(selected_movie)
+                if recommendations is not None:
+                    st.subheader("You might also like:")
+                    cols = st.columns(5)
                     
-                    with st.expander("More Info"):
-                        st.write(f"**Release:** {movie['release_date'][:4]}")
-                        st.write(f"**Cast:** {movie['cast']}")
-                        st.write(f"**Genres:** {movie['genres']}")
-                        st.write(movie['overview'])
+                    for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
+                        with col:
+                            try:
+                                poster_path = get_movie_poster(movie['id'])
+                                if poster_path:
+                                    st.image(poster_path, width=200)  # Fixed width instead of container_width
+                                else:
+                                    # Default image if poster not found
+                                    st.image("https://via.placeholder.com/200x300?text=No+Poster", width=200)
+                            except Exception as e:
+                                # Fallback image for any error
+                                st.image("https://via.placeholder.com/200x300?text=No+Poster", width=200)
+                            
+                            # Movie details below poster
+                            st.markdown(f"**{movie['title']}**")
+                            st.markdown(f"⭐ {movie['vote_average']:.1f}/10")
+                            
+                            with st.expander("More Info"):
+                                st.write(f"**Release:** {movie['release_date'][:4]}")
+                                st.write(f"**Cast:** {movie['cast']}")
+                                st.write(f"**Genres:** {movie['genres']}")
+                                st.write(movie['overview'][:200] + "...")  # Truncate overview
+            
+            except Exception as e:
+                st.error("Error loading recommendations. Please try again.")
+                print(f"Debug - Error: {str(e)}")  # For debugging
 
 if __name__ == "__main__":
     main() 
