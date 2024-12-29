@@ -54,7 +54,7 @@ The system uses content-based filtering which recommends movies based on their s
 
 ## 🌐 Live Demo
 
-Try the app here: [Movie Recommender](your-streamlit-link)
+Try the app here: [Movie Recommender](https://filmfinder-ai.streamlit.app/)
 
 ## 📊 Datasets Used
 
@@ -74,6 +74,3 @@ The system uses the TMDB 5000 Movie Dataset:
    - Movie IDs
    - Character names
 
-## 🔧 Technical Implementation
-
-### Data Processing Pipeline
