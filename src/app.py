@@ -164,16 +164,19 @@ st.markdown("""
 @st.cache_data(ttl=3600)
 def get_movie_poster(movie_id):
     try:
-        response = requests.get(
-            f"https://api.themoviedb.org/3/movie/{movie_id}",
-            params={"api_key": TMDB_API_KEY}
-        )
+        url = f"https://api.themoviedb.org/3/movie/{movie_id}"
+        headers = {
+            "Authorization": f"Bearer {TMDB_API_READ_ACCESS_TOKEN}",
+            "accept": "application/json"
+        }
+        response = requests.get(url, headers=headers)
         data = response.json()
+        
         if 'poster_path' in data and data['poster_path']:
             return f"https://image.tmdb.org/t/p/w500{data['poster_path']}"
         return None
     except Exception as e:
-        st.error(f"Error fetching poster: {str(e)}")
+        print(f"Error fetching poster: {str(e)}")  # For debugging
         return None
 
 @st.cache_data(ttl=3600)
@@ -256,32 +259,41 @@ def main():
     # Show recommendations when button is clicked
     if show_rec and selected_movie:
         with st.spinner('Finding similar movies...'):
-            recommendations = recommender.get_recommendations(selected_movie)
-            
-            if recommendations is not None:
-                st.subheader("You might also like:")
+            try:
+                recommendations = recommender.get_recommendations(selected_movie)
                 
-                cols = st.columns(5)
-                for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
-                    with col:
-                        # Add error handling for movie poster
-                        try:
-                            poster_url = get_movie_poster(movie['id'])
-                            if poster_url:
-                                st.image(poster_url, use_container_width=True)
-                            else:
-                                st.image("https://via.placeholder.com/400x600?text=No+Poster", use_container_width=True)
-                        except Exception as e:
-                            st.image("https://via.placeholder.com/400x600?text=No+Poster", use_container_width=True)
+                if recommendations is not None:
+                    st.subheader("You might also like:")
+                    
+                    cols = st.columns(5)
+                    for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
+                        with col:
+                            try:
+                                poster_path = get_movie_poster(movie['id'])
+                                if poster_path:
+                                    st.image(poster_path, use_container_width=True)
+                                else:
+                                    # Use a default movie poster image
+                                    st.image("https://via.placeholder.com/400x600?text=No+Image+Available", use_container_width=True)
+                            except:
+                                # Fallback if poster loading fails
+                                st.image("https://via.placeholder.com/400x600?text=No+Image+Available", use_container_width=True)
                             
-                        st.markdown(f"**{movie['title']}**")
-                        st.markdown(f"⭐ {movie['vote_average']}/10")
-                        st.markdown(f"📅 {movie['release_date'][:4]}")
-                        
-                        with st.expander("More Details"):
-                            st.write(f"**Cast:** {movie['cast']}")
-                            st.write(f"**Genres:** {movie['genres']}")
-                            st.write(movie['overview'])
+                            # Show other movie details
+                            st.markdown(f"**{movie['title']}**")
+                            st.markdown(f"⭐ {movie['vote_average']:.1f}/10")
+                            st.markdown(f"📅 {movie['release_date'][:4]}")
+                            
+                            with st.expander("More Details"):
+                                st.write(f"**Cast:** {movie['cast']}")
+                                st.write(f"**Genres:** {movie['genres']}")
+                                st.write(movie['overview'])
+                    except Exception as e:
+                        st.error("Sorry, couldn't load recommendations. Please try again.")
+                        print(f"Error in recommendations: {str(e)}")  # For debugging
+            except Exception as e:
+                st.error("Sorry, couldn't load recommendations. Please try again.")
+                print(f"Error in recommendations: {str(e)}")  # For debugging
 
 @st.cache_resource
 def load_recommender():
