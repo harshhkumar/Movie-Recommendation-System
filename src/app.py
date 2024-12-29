@@ -87,22 +87,28 @@ def main():
     # Add CSS for better alignment
     st.markdown("""
         <style>
-        .search-container {
-            display: flex;
+        div[data-testid="stHorizontalBlock"] {
             align-items: center;
-            gap: 20px;
-            margin-bottom: 30px;
+            gap: 1rem;
         }
-        .stButton > button {
+        
+        div.stButton > button {
             background-color: rgb(229, 9, 20);
             color: white;
+            height: 61px !important;  /* Match selectbox height */
+            margin-top: 24px;  /* Match selectbox top margin */
+            padding: 0 20px;
             border: none;
-            padding: 8px 20px;
             border-radius: 4px;
-            height: 42px;  /* Match selectbox height */
         }
-        .stSelectbox {
-            min-width: 300px;
+        
+        div.stSelectbox > div {
+            background-color: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+        
+        div.stSelectbox > label {
+            background: none !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -118,7 +124,7 @@ def main():
     recommender = load_recommender()
     
     # Search container with better alignment
-    col1, col2 = st.columns([4, 1])
+    col1, col2 = st.columns([5, 1])  # Adjusted ratio
     
     with col1:
         movie_list = recommender.get_all_movie_titles()
@@ -129,9 +135,11 @@ def main():
         )
     
     with col2:
-        show_rec = st.button('Show Recommendations', 
-                            use_container_width=True,
-                            key="rec_button")
+        show_rec = st.button(
+            'Show Recommendations', 
+            use_container_width=True,
+            key="rec_button"
+        )
 
     # Cache movie details
     @st.cache_data
