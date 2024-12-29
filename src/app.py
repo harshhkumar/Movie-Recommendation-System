@@ -84,33 +84,69 @@ def get_movie_trailer(movie_id):
 def main():
     st.title("🎬 Movie Recommendation System")
     
-    # Load recommender
-    recommender = MovieRecommender()
-    recommender.load_and_prepare_data()
+    # Add CSS for better alignment
+    st.markdown("""
+        <style>
+        .search-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stButton > button {
+            background-color: rgb(229, 9, 20);
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 4px;
+            height: 42px;  /* Match selectbox height */
+        }
+        .stSelectbox {
+            min-width: 300px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
     
-    # Search container
-    with st.container():
-        col1, col2 = st.columns([4, 1])
-        
-        with col1:
-            movie_list = recommender.get_all_movie_titles()
-            selected_movie = st.selectbox(
-                "Type or select a movie you like:",
-                movie_list
-            )
-        
-        with col2:
-            show_rec = st.button('Show Recommendations', use_container_width=True)
+    # Cache the recommender
+    @st.cache_resource
+    def load_recommender():
+        recommender = MovieRecommender()
+        recommender.load_and_prepare_data()
+        return recommender
+    
+    # Load recommender with caching
+    recommender = load_recommender()
+    
+    # Search container with better alignment
+    col1, col2 = st.columns([4, 1])
+    
+    with col1:
+        movie_list = recommender.get_all_movie_titles()
+        selected_movie = st.selectbox(
+            "Type or select a movie you like:",
+            movie_list,
+            key="movie_select"
+        )
+    
+    with col2:
+        show_rec = st.button('Show Recommendations', 
+                            use_container_width=True,
+                            key="rec_button")
+
+    # Cache movie details
+    @st.cache_data
+    def get_cached_movie_details(movie_id):
+        return get_movie_poster(movie_id), get_movie_trailer(movie_id)
     
     # Show selected movie details
     if selected_movie and not show_rec:
         movie_details = recommender.get_movie_details(selected_movie)
-        trailer_url = get_movie_trailer(movie_details['id'])
+        poster_url, trailer_url = get_cached_movie_details(movie_details['id'])
         
         st.markdown(f"""
             <div class="movie-container">
                 <div class="movie-poster-container">
-                    <img src="{get_movie_poster(movie_details['id'])}" class="movie-poster">
+                    <img src="{poster_url}" class="movie-poster">
                 </div>
                 <div class="movie-details">
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
@@ -126,25 +162,32 @@ def main():
             </div>
         """, unsafe_allow_html=True)
     
-    # Show recommendations
+    # Show recommendations with optimization
     if show_rec and selected_movie:
-        recommendations = recommender.get_recommendations(selected_movie)
-        if recommendations is not None:
-            st.subheader("You might also like:")
-            cols = st.columns(5)
-            for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
-                with col:
-                    poster_path = get_movie_poster(movie['id'])
-                    if poster_path:
-                        st.image(poster_path, use_container_width=True)
-                    st.markdown(f"**{movie['title']}**")
-                    st.markdown(f"⭐ {movie['vote_average']:.1f}/10")
-                    
-                    with st.expander("More Info"):
-                        st.write(f"**Release:** {movie['release_date'][:4]}")
-                        st.write(f"**Cast:** {movie['cast']}")
-                        st.write(f"**Genres:** {movie['genres']}")
-                        st.write(movie['overview'])
+        with st.spinner('Finding similar movies...'):
+            recommendations = recommender.get_recommendations(selected_movie)
+            if recommendations is not None:
+                st.subheader("You might also like:")
+                
+                # Pre-fetch all posters
+                posters = {}
+                for _, movie in recommendations.iterrows():
+                    poster_url, _ = get_cached_movie_details(movie['id'])
+                    posters[movie['id']] = poster_url
+                
+                # Display recommendations
+                cols = st.columns(5)
+                for idx, (col, (_, movie)) in enumerate(zip(cols, recommendations.iterrows())):
+                    with col:
+                        if posters.get(movie['id']):
+                            st.image(posters[movie['id']], use_container_width=True)
+                        st.markdown(f"**{movie['title']}**")
+                        st.markdown(f"⭐ {movie['vote_average']:.1f}/10")
+                        
+                        if st.button(f"More Info", key=f"more_info_{idx}"):
+                            st.write(f"**Release:** {movie['release_date'][:4]}")
+                            st.write(f"**Cast:** {movie['cast'][:100]}...")
+                            st.write(movie['overview'][:200] + "...")
 
 if __name__ == "__main__":
     main() 
