@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 import ast
+import streamlit as st
 
 class MovieRecommender:
     def __init__(self):
@@ -10,6 +11,7 @@ class MovieRecommender:
         self.credits_df = None
         self.similarity_matrix = None
         
+    @st.cache_data
     def load_and_prepare_data(self):
         # Load data
         self.movies_df = pd.read_csv('./data/tmdb_5000_movies.csv')
@@ -43,6 +45,7 @@ class MovieRecommender:
     def get_movie_details(self, title):
         return self.movies_df[self.movies_df['title'] == title].iloc[0]
     
+    @st.cache_data
     def get_recommendations(self, title):
         try:
             idx = self.movies_df[self.movies_df['title'] == title].index[0]
