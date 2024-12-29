@@ -74,6 +74,3 @@ The system uses the TMDB 5000 Movie Dataset:
    - Movie IDs
    - Character names
 
-## 🔧 Technical Implementation
-
-### Data Processing Pipeline
