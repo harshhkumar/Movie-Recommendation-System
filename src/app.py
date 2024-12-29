@@ -84,31 +84,36 @@ def get_movie_trailer(movie_id):
 def main():
     st.title("🎬 Movie Recommendation System")
     
-    # Add CSS for better alignment
+    # Add CSS for perfect vertical alignment
     st.markdown("""
         <style>
-        div[data-testid="stHorizontalBlock"] {
+        /* Container styling */
+        .search-container {
+            display: flex;
             align-items: center;
-            gap: 1rem;
+            padding: 1rem 0;
         }
         
+        /* Remove extra padding/margin from selectbox */
+        div[data-testid="stSelectbox"] {
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+        
+        /* Button styling */
         div.stButton > button {
+            margin-top: 0 !important;
+            height: 42px !important;
             background-color: rgb(229, 9, 20);
             color: white;
-            height: 61px !important;  /* Match selectbox height */
-            margin-top: 24px;  /* Match selectbox top margin */
-            padding: 0 20px;
             border: none;
-            border-radius: 4px;
         }
         
-        div.stSelectbox > div {
-            background-color: rgba(255, 255, 255, 0.05);
-            border-radius: 4px;
-        }
-        
-        div.stSelectbox > label {
-            background: none !important;
+        /* Label styling */
+        .search-label {
+            margin-bottom: 0 !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -123,14 +128,17 @@ def main():
     # Load recommender with caching
     recommender = load_recommender()
     
-    # Search container with better alignment
-    col1, col2 = st.columns([5, 1])  # Adjusted ratio
+    # Search container with perfect alignment
+    st.markdown('<p class="search-label">Type or select a movie you like:</p>', unsafe_allow_html=True)
+    
+    col1, col2 = st.columns([5, 1])
     
     with col1:
         movie_list = recommender.get_all_movie_titles()
         selected_movie = st.selectbox(
-            "Type or select a movie you like:",
-            movie_list,
+            label="Select a movie",
+            options=movie_list,
+            label_visibility="collapsed",
             key="movie_select"
         )
     
